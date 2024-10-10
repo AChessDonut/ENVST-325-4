@@ -137,14 +137,13 @@ ggplot(data = weather[weather$AirTemp < 0 &
 #Problem 2: Create a data flag that warns a user if the battery voltage falls 
 #below 8.5 Volts. Explain how you set up the flag.
 weather$BatteryVoltageFlag <- ifelse(weather$BatVolt <= 8500, 1, 0) 
-
+weather$BatteryVoltageFlag
 #Problem 3: You should also create a function that checks for observations 
 #that are in unrealistic data ranges in air temperature and solar radiation. 
 #Explain how your function works.
 check_unrealistic_values <- function(data) {
   data$Air_Temp_Flag <- ifelse(data$AirTemp < 0, 1, 0)
   
-  # Flag for unrealistic solar radiation values (below 0 or above 2.5 W/m^2)
   data$Sol_Radiation_Flag <- ifelse(data$SolRad < 0 | data$SolRad > 2.5, 1, 0)
 }
 check_unrealistic_values(weather)
@@ -154,11 +153,9 @@ check_unrealistic_values(weather)
 #Describe whether you think this might be an issue.
 # Function to check for persistent low temperatures
 winter_air_temps <- function(temp, date) {
-  # Filter the dates and temperatures for Jan - Mar 2021
   date_filtered <- date[date >= "2021-01-01" & date <= "2021-03-31"]
   temp_filtered <- temp[date >= "2021-01-01" & date <= "2021-03-31"]
-  
-  # Return a data frame with the filtered temperatures and dates
+
   data.frame(Date = date_filtered, AirTemp = temp_filtered)
 }
 winter_data <- winter_air_temps(weather$AirTemp, weather$dateF)
@@ -176,3 +173,45 @@ ggplot(winter_data, aes(x = Date, y = AirTemp)) +
 #are not likely to be affected by snow accumulation on the sensor. 
 #How many daily observations have precipitation observations (not a NA) 
 #in your final data table?
+total_daily_precipitation <- function(data) {
+  # Filter the dataset for dates in March and April 2021
+  filtered_data <- data[data$dateF >= "2021-03-01" & data$dateF <= "2021-04-30"]
+  
+  # Loop through each unique date
+  for (i in data[-length(data)] %--% data[-1]) {
+    # Subset data for the specific date
+    day_data <- filtered_data[filtered_data$dateF == data[i], ]
+    
+    # Parse the current date
+    current_date <- as.Date(data[i])
+    
+    # Check for the previous day's date
+    if (i > 1) {
+      previous_date <- as.Date(unique_dates[i - 1])
+    } else {
+      previous_date <- NA
+    }
+    
+    # Subset data for the previous date if it exists
+    if (!is.na(previous_date)) {
+      prev_day_data <- filtered_data[filtered_data$dateF == previous_date, ]
+    } else {
+      prev_day_data <- NA
+    }
+    
+    current_temp_below_threshold <- ifelse(length(day_data$AirTemp) > 0, min(day_data$AirTemp) < 35, FALSE)
+    
+  
+    if (!is.null(prev_day_data)) {
+      prev_temp_below_threshold <- min(prev_day_data$AirTemp) < 35
+    } else {
+      prev_temp_below_threshold <- FALSE
+    }
+    
+  }
+  
+  daily_precip_df <- data.frame(Date = unique_dates, TotalPrecip = daily_precip)
+  return(daily_precip_df)
+}
+
+march_april_precip <- total_daily_precipitation(weather)
